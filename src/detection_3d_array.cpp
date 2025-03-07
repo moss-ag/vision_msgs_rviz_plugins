@@ -32,6 +32,8 @@ Detection3DArrayDisplay::Detection3DArrayDisplay()
   string_property_ = new rviz_common::properties::StringProperty(
     "ConfigPath", "", "Path to yaml config for rgb color mappings", this,
     SLOT(updateColorConfigs()));
+  confidence_threshold_property_ = new rviz_common::properties::FloatProperty(
+    "Confidence Threshold", 0.5, "Minimum confidence for detections to be displayed.", this, SLOT(updateThreshold()));
 }
 
 Detection3DArrayDisplay::~Detection3DArrayDisplay()
@@ -57,11 +59,15 @@ void Detection3DArrayDisplay::onInitialize()
   alpha_property_->setMax(1.0);
   alpha_property_->setMin(0.1);
 
+  confidence_threshold_property_->setMax(1.0);
+  confidence_threshold_property_->setMin(0.0);
+
   line_width = line_width_property_->getFloat();
   alpha = alpha_property_->getFloat();
 
   only_edge_ = only_edge_property_->getBool();
   show_score_ = show_score_property_->getBool();
+  confidence_threshold_ = confidence_threshold_property_->getFloat();
 }
 
 void Detection3DArrayDisplay::load(const rviz_common::Config & config)
@@ -74,11 +80,29 @@ void Detection3DArrayDisplay::processMessage(
   vision_msgs::msg::Detection3DArray::ConstSharedPtr msg)
 {
   latest_msg = msg;
+
+  auto filtered_msg = filterMessage(latest_msg);
   if (!only_edge_) {
-    showBoxes(msg, show_score_);
+    showBoxes(filtered_msg, show_score_);
   } else {
-    showEdges(msg, show_score_);
+    showEdges(filtered_msg, show_score_);
   }
+}
+
+vision_msgs::msg::Detection3DArray::ConstSharedPtr
+Detection3DArrayDisplay::filterMessage(const vision_msgs::msg::Detection3DArray::ConstSharedPtr& msg) const
+{
+  auto filtered_msg = std::make_shared<vision_msgs::msg::Detection3DArray>();
+  filtered_msg->header = msg->header;
+  for (const auto& detection: msg->detections) {
+    if (detection.results.empty()) { continue; }
+
+    if (detection.results[0].hypothesis.score >= confidence_threshold_) {
+      filtered_msg->detections.push_back(detection);
+    }
+  }
+
+  return filtered_msg;
 }
 
 void Detection3DArrayDisplay::update(float wall_dt, float ros_dt)
@@ -103,10 +127,11 @@ void Detection3DArrayDisplay::updateEdge()
   }
   // Imediately apply attribute
   if (latest_msg) {
+    auto filtered_msg = filterMessage(latest_msg);
     if (only_edge_) {
-      showEdges(latest_msg, show_score_);
+      showEdges(filtered_msg, show_score_);
     } else {
-      showBoxes(latest_msg, show_score_);
+      showBoxes(filtered_msg, show_score_);
     }
   }
 }
@@ -138,6 +163,13 @@ void Detection3DArrayDisplay::updateShowScores()
 void Detection3DArrayDisplay::updateColorConfigs()
 {
   this->updateColorConfig();
+}
+
+void Detection3DArrayDisplay::updateThreshold() {
+  confidence_threshold_ = confidence_threshold_property_->getFloat();
+  if (latest_msg) {
+    processMessage(latest_msg);
+  }
 }
 
 }  // namespace rviz_plugins

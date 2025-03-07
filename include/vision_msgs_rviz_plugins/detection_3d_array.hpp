@@ -64,14 +64,17 @@ public:
 private:
   // Convert boxes into markers, push them to the display queue
   void processMessage(Detection3DArray::ConstSharedPtr array) override;
+  Detection3DArray::ConstSharedPtr filterMessage(const Detection3DArray::ConstSharedPtr& msg) const;
   vision_msgs::msg::Detection3DArray::ConstSharedPtr latest_msg;
 
 protected:
   bool only_edge_, show_score_;
+  float confidence_threshold_;
   rviz_common::properties::BoolProperty * only_edge_property_;
   rviz_common::properties::FloatProperty * line_width_property_;
   rviz_common::properties::FloatProperty * alpha_property_;
   rviz_common::properties::BoolProperty * show_score_property_;
+  rviz_common::properties::FloatProperty* confidence_threshold_property_;
 
 protected Q_SLOTS:
   void updateEdge();
@@ -79,6 +82,7 @@ protected Q_SLOTS:
   void updateAlpha();
   void updateShowScores();
   void updateColorConfigs();
+  void updateThreshold();
 };
 }  // namespace rviz_plugins
 
