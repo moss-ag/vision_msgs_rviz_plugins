@@ -24,6 +24,7 @@
 #include <vector>
 #include <iomanip>
 #include <unordered_map>
+#include <functional>
 
 #include <rcpputils/filesystem_helper.hpp>
 #include <rviz_common/display.hpp>
@@ -63,10 +64,12 @@ protected:
   std::unique_ptr<MarkerCommon> m_marker_common;
   std::vector<BillboardLinePtr> edges_;
   std::string color_config_path_;
+  rviz_common::properties::BoolProperty * autocompute_colors_property_;
   rviz_common::properties::StringProperty * string_property_;
   std::unordered_map<int, visualization_msgs::msg::Marker::SharedPtr> score_markers;
+  std::hash<std::string> string_hasher;
 
-  std::map<std::string, QColor> idToColorMap = {
+  std::unordered_map<std::string, QColor> idToColorMap = {
     {"car", QColor(255, 165, 0)},
     {"person", QColor(0, 0, 255)},
     {"cyclist", QColor(255, 255, 0)},
@@ -94,22 +97,45 @@ protected:
     return marker;
   }
 
-  QColor getColor(std::string id = "") const
+  QColor getColor(std::string id = "")
   {
     QColor color;
     if (id == "") {
       color.setRgb(255, 22, 80, 255);
     } else {
+      // Convert the string to lowercase
+      std::string lowercaseId = id;
       std::for_each(
-        id.begin(), id.end(), [&](char & c) {
+        lowercaseId.begin(), lowercaseId.end(), [&](char & c) {
           c = std::tolower(c, std::locale());
         });
-      std::string lowercaseId = id;
-      auto it = idToColorMap.find(lowercaseId);
-      if (it != idToColorMap.end()) {
-        color = it->second;
+  
+
+      if (autocompute_colors_property_->getBool())
+      {
+        if (idToColorMap.find(lowercaseId) != idToColorMap.end()) {
+          color = idToColorMap[lowercaseId];
+        } else {
+          const size_t hash = string_hasher(lowercaseId);   
+
+          // Extract RGB components from the hash
+          // Use different bit shifts to get varied color components
+          // Ensure each component is at least 64 to avoid very dark colors
+          const int r = 64 + ((hash & 0xFF0000) >> 16) % 192;    // Range: 64-255
+          const int g = 64 + ((hash & 0x00FF00) >> 8) % 192;     // Range: 64-255
+          const int b = 64 + (hash & 0x0000FF) % 192;            // Range: 64-255
+          color.setRgb(r, g, b);
+          
+          // Store the color in the map for future use
+          idToColorMap[lowercaseId] = color;
+        }        
       } else {
-        color.setRgb(190, 190, 190);
+        auto it = idToColorMap.find(lowercaseId);
+        if (it != idToColorMap.end()) {
+          color = it->second;
+        } else {
+          color.setRgb(190, 190, 190);
+        }
       }
     }
     return color;
@@ -483,6 +509,10 @@ protected:
 
   void updateColorConfig()
   {
+    if (!autocompute_colors_property_->getBool()) {
+      return;
+    }
+
     std::ostringstream oss;
     const std::string tmp_path = string_property_->getStdString();
     if (rcpputils::fs::exists(tmp_path)) {

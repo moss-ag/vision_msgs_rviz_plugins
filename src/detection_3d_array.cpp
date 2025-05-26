@@ -34,6 +34,9 @@ Detection3DArrayDisplay::Detection3DArrayDisplay()
     SLOT(updateColorConfigs()));
   confidence_threshold_property_ = new rviz_common::properties::FloatProperty(
     "Confidence Threshold", 0.5, "Minimum confidence for detections to be displayed.", this, SLOT(updateThreshold()));
+    autocompute_colors_property_ = new rviz_common::properties::BoolProperty(
+      "Autocompute Colors", false, "Automatically compute colors for each detection class", this,
+      SLOT(updateAutocomputeColors()));
 }
 
 Detection3DArrayDisplay::~Detection3DArrayDisplay()
@@ -117,6 +120,16 @@ void Detection3DArrayDisplay::reset()
   edges_.clear();
 }
 
+void Detection3DArrayDisplay::updateAutocomputeColors()
+{
+  if (autocompute_colors_property_->getBool()) {
+    this->updateColorConfig();
+  }
+
+  // Update the color immediately
+  updateEdge();
+}
+
 void Detection3DArrayDisplay::updateEdge()
 {
   only_edge_ = only_edge_property_->getBool();
@@ -168,6 +181,7 @@ void Detection3DArrayDisplay::updateColorConfigs()
 void Detection3DArrayDisplay::updateThreshold() {
   confidence_threshold_ = confidence_threshold_property_->getFloat();
   if (latest_msg) {
+    reset();
     processMessage(latest_msg);
   }
 }

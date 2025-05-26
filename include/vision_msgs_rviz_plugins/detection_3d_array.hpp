@@ -77,6 +77,7 @@ protected:
   rviz_common::properties::FloatProperty* confidence_threshold_property_;
 
 protected Q_SLOTS:
+  void updateAutocomputeColors();
   void updateEdge();
   void updateLineWidth();
   void updateAlpha();

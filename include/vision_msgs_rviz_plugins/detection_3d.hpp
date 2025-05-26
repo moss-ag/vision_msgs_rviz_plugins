@@ -70,6 +70,7 @@ protected:
   rviz_common::properties::BoolProperty * show_score_property_;
 
 protected Q_SLOTS:
+  void updateAutocomputeColors(); 
   void updateEdge();
   void updateLineWidth();
   void updateAlpha();

@@ -32,6 +32,9 @@ Detection3DDisplay::Detection3DDisplay()
   string_property_ = new rviz_common::properties::StringProperty(
     "ConfigPath", "", "Path to yaml config for rgb color mappings", this,
     SLOT(updateColorConfigs()));
+  autocompute_colors_property_ = new rviz_common::properties::BoolProperty(
+    "Autocompute Colors", false, "Automatically compute colors for each detection class", this,
+    SLOT(updateAutocomputeColors()));
 }
 
 Detection3DDisplay::~Detection3DDisplay()
@@ -91,6 +94,16 @@ void Detection3DDisplay::reset()
   RosTopicDisplay::reset();
   m_marker_common->clearMarkers();
   edges_.clear();
+}
+
+void Detection3DDisplay::updateAutocomputeColors()
+{
+  if (autocompute_colors_property_->getBool()) {
+    this->updateColorConfig();
+  }
+
+  // Update the color immediately
+  updateEdge();
 }
 
 void Detection3DDisplay::updateEdge()
