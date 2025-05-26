@@ -151,6 +151,9 @@ void Detection3DDisplay::updateShowScores()
 void Detection3DDisplay::updateColorConfigs()
 {
   this->updateColorConfig();
+
+  // Update the color immediately
+  updateEdge();
 }
 
 }  // namespace rviz_plugins

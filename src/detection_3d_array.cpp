@@ -176,6 +176,9 @@ void Detection3DArrayDisplay::updateShowScores()
 void Detection3DArrayDisplay::updateColorConfigs()
 {
   this->updateColorConfig();
+
+  // Update the color immediately
+  updateEdge();
 }
 
 void Detection3DArrayDisplay::updateThreshold() {
