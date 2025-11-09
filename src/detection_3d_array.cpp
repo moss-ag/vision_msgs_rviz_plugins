@@ -29,6 +29,10 @@ Detection3DArrayDisplay::Detection3DArrayDisplay()
     "Alpha", 1.0, "Transparency", this, SLOT(updateAlpha()));
   show_score_property_ = new rviz_common::properties::BoolProperty(
     "Show Score", false, "Display score next to bounding boxes", this, SLOT(updateShowScores()));
+  show_id_property_ = new rviz_common::properties::BoolProperty(
+    "Show ID", false, "Display detection ID next to bounding boxes", this, SLOT(updateShowIds()));
+  text_scale_property_ = new rviz_common::properties::FloatProperty(
+    "Text Scale", 0.3, "Scale of text labels for ID and score", this, SLOT(updateTextScale()));
   string_property_ = new rviz_common::properties::StringProperty(
     "ConfigPath", "", "Path to yaml config for rgb color mappings", this,
     SLOT(updateColorConfigs()));
@@ -45,6 +49,8 @@ Detection3DArrayDisplay::~Detection3DArrayDisplay()
   delete line_width_property_;
   delete alpha_property_;
   delete show_score_property_;
+  delete show_id_property_;
+  delete text_scale_property_;
 }
 
 void Detection3DArrayDisplay::onInitialize()
@@ -65,12 +71,17 @@ void Detection3DArrayDisplay::onInitialize()
   confidence_threshold_property_->setMax(1.0);
   confidence_threshold_property_->setMin(0.0);
 
+  text_scale_property_->setMax(2.0);
+  text_scale_property_->setMin(0.1);
+
   line_width = line_width_property_->getFloat();
   alpha = alpha_property_->getFloat();
 
   only_edge_ = only_edge_property_->getBool();
   show_score_ = show_score_property_->getBool();
+  show_id_ = show_id_property_->getBool();
   confidence_threshold_ = confidence_threshold_property_->getFloat();
+  text_scale_ = text_scale_property_->getFloat();
 }
 
 void Detection3DArrayDisplay::load(const rviz_common::Config & config)
@@ -86,9 +97,9 @@ void Detection3DArrayDisplay::processMessage(
 
   auto filtered_msg = filterMessage(latest_msg);
   if (!only_edge_) {
-    showBoxes(filtered_msg, show_score_);
+    showBoxes(filtered_msg, show_score_, show_id_, text_scale_);
   } else {
-    showEdges(filtered_msg, show_score_);
+    showEdges(filtered_msg, show_score_, show_id_, text_scale_);
   }
 }
 
@@ -142,9 +153,9 @@ void Detection3DArrayDisplay::updateEdge()
   if (latest_msg) {
     auto filtered_msg = filterMessage(latest_msg);
     if (only_edge_) {
-      showEdges(filtered_msg, show_score_);
+      showEdges(filtered_msg, show_score_, show_id_, text_scale_);
     } else {
-      showBoxes(filtered_msg, show_score_);
+      showBoxes(filtered_msg, show_score_, show_id_, text_scale_);
     }
   }
 }
@@ -168,6 +179,22 @@ void Detection3DArrayDisplay::updateAlpha()
 void Detection3DArrayDisplay::updateShowScores()
 {
   show_score_ = show_score_property_->getBool();
+  if (latest_msg) {
+    processMessage(latest_msg);
+  }
+}
+
+void Detection3DArrayDisplay::updateShowIds()
+{
+  show_id_ = show_id_property_->getBool();
+  if (latest_msg) {
+    processMessage(latest_msg);
+  }
+}
+
+void Detection3DArrayDisplay::updateTextScale()
+{
+  text_scale_ = text_scale_property_->getFloat();
   if (latest_msg) {
     processMessage(latest_msg);
   }

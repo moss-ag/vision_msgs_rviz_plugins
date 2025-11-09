@@ -68,13 +68,16 @@ private:
   vision_msgs::msg::Detection3DArray::ConstSharedPtr latest_msg;
 
 protected:
-  bool only_edge_, show_score_;
+  bool only_edge_, show_score_, show_id_;
   float confidence_threshold_;
+  float text_scale_;
   rviz_common::properties::BoolProperty * only_edge_property_;
   rviz_common::properties::FloatProperty * line_width_property_;
   rviz_common::properties::FloatProperty * alpha_property_;
   rviz_common::properties::BoolProperty * show_score_property_;
+  rviz_common::properties::BoolProperty * show_id_property_;
   rviz_common::properties::FloatProperty* confidence_threshold_property_;
+  rviz_common::properties::FloatProperty* text_scale_property_;
 
 protected Q_SLOTS:
   void updateAutocomputeColors();
@@ -82,6 +85,8 @@ protected Q_SLOTS:
   void updateLineWidth();
   void updateAlpha();
   void updateShowScores();
+  void updateShowIds();
+  void updateTextScale();
   void updateColorConfigs();
   void updateThreshold();
 };

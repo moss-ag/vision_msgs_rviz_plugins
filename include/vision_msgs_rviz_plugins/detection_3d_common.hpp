@@ -67,6 +67,7 @@ protected:
   rviz_common::properties::BoolProperty * autocompute_colors_property_;
   rviz_common::properties::StringProperty * string_property_;
   std::unordered_map<int, visualization_msgs::msg::Marker::SharedPtr> score_markers;
+  std::unordered_map<int, visualization_msgs::msg::Marker::SharedPtr> id_markers;
   std::hash<std::string> string_hasher;
 
   std::unordered_map<std::string, QColor> idToColorMap = {
@@ -143,10 +144,13 @@ protected:
 
   void showBoxes(
     const vision_msgs::msg::Detection3DArray::ConstSharedPtr & msg,
-    const bool show_score)
+    const bool show_score,
+    const bool show_id = false,
+    const float text_scale = 0.3f)
   {
     edges_.clear();
     ClearScores(show_score);
+    ClearIds(show_id);
 
     for (size_t idx = 0U; idx < msg->detections.size(); idx++) {
       const auto marker_ptr = get_marker(msg->detections[idx].bbox);
@@ -162,10 +166,13 @@ protected:
         const auto & result_with_highest_score = *iter;
         color = getColor(result_with_highest_score.hypothesis.class_id);
         if (show_score) {
-          ShowScore(msg->detections[idx], result_with_highest_score.hypothesis.score, idx);
+          ShowScore(msg->detections[idx], result_with_highest_score.hypothesis.score, idx, text_scale);
         }
       } else {
         color = getColor(msg->detections[idx].results[0].hypothesis.class_id);
+      }
+      if (show_id) {
+        ShowId(msg->detections[idx], idx, text_scale);
       }
       marker_ptr->color.r = color.red() / 255.0;
       marker_ptr->color.g = color.green() / 255.0;
@@ -226,10 +233,13 @@ protected:
 
   void showEdges(
     const vision_msgs::msg::Detection3DArray::ConstSharedPtr & msg,
-    const bool show_score)
+    const bool show_score,
+    const bool show_id = false,
+    const float text_scale = 0.3f)
   {
     m_marker_common->clearMarkers();
     ClearScores(show_score);
+    ClearIds(show_id);
 
     allocateBillboardLines(msg->detections.size());
 
@@ -246,8 +256,11 @@ protected:
           });
         color = getColor(iter->hypothesis.class_id);
         if (show_score) {
-          ShowScore(msg->detections[idx], iter->hypothesis.score, idx);
+          ShowScore(msg->detections[idx], iter->hypothesis.score, idx, text_scale);
         }
+      }
+      if (show_id) {
+        ShowId(msg->detections[idx], idx, text_scale);
       }
       geometry_msgs::msg::Vector3 dimensions = box.size;
 
@@ -468,7 +481,7 @@ protected:
 
   void ShowScore(
     const vision_msgs::msg::Detection3D detection, const double score,
-    const size_t idx)
+    const size_t idx, const float text_scale = 0.3f)
   {
     auto marker = std::make_shared<Marker>();
     marker->type = Marker::TEXT_VIEW_FACING;
@@ -479,7 +492,7 @@ protected:
     oss << std::setprecision(2);
     oss << score;
     marker->text = oss.str();
-    marker->scale.z = 0.5;         // Set the size of the text
+    marker->scale.z = text_scale;         // Set the size of the text
     marker->id = idx;
     marker->ns = "score";
     marker->color.r = 1.0f;
@@ -496,6 +509,32 @@ protected:
     score_markers[idx] = marker;
   }
 
+  void ShowId(
+    const vision_msgs::msg::Detection3D detection,
+    const size_t idx, const float text_scale = 0.3f)
+  {
+    auto marker = std::make_shared<Marker>();
+    marker->type = Marker::TEXT_VIEW_FACING;
+    marker->action = Marker::ADD;
+    marker->header = detection.header;
+    marker->text = detection.id;
+    marker->scale.z = text_scale;         // Set the size of the text
+    marker->id = idx;
+    marker->ns = "id";
+    marker->color.r = 1.0f;
+    marker->color.g = 1.0f;
+    marker->color.b = 1.0f;
+    marker->color.a = alpha;
+    marker->pose.position.x = static_cast<double>(detection.bbox.center.position.x);
+    marker->pose.position.y = static_cast<double>(detection.bbox.center.position.y);
+    marker->pose.position.z =
+      static_cast<double>(detection.bbox.center.position.z + (detection.bbox.size.z / 2.0) * 1.4);
+
+    // Add the marker to the MarkerArray message
+    m_marker_common->addMessage(marker);
+    id_markers[idx] = marker;
+  }
+
   void ClearScores(const bool show_score)
   {
     if (!show_score) {
@@ -504,6 +543,17 @@ protected:
         m_marker_common->addMessage(marker);
       }
       score_markers.clear();
+    }
+  }
+
+  void ClearIds(const bool show_id)
+  {
+    if (!show_id) {
+      for (auto &[id, marker] : id_markers) {
+        marker->action = visualization_msgs::msg::Marker::DELETE;
+        m_marker_common->addMessage(marker);
+      }
+      id_markers.clear();
     }
   }
 
